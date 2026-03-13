@@ -5,22 +5,18 @@ Supports Arabic & English | يدعم العربية والإنجليزية
 
 import logging
 import random
-<<<<<<< HEAD
-import os  # <-- أضف هذا السطر
-=======
->>>>>>> 19ecd3bebd026298366188d6ad63363db19dfe44
+import os  # لقراءة التوكن من متغير البيئة
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
-    ContextTypes, ConversationHandler
+    ContextTypes
 )
 
 # ─── Configuration ────────────────────────────────────────────────────────────
-<<<<<<< HEAD
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # <-- هنا يقرأ التوكن من البيئة
-=======
-BOT_TOKEN = "8684217515:AAHMCpfI_0p2LoQA5H_JuANqOk42yzAuCNQ"  # ← ضع توكن البوت هنا
->>>>>>> 19ecd3bebd026298366188d6ad63363db19dfe44
+# قراءة التوكن من متغير البيئة (يجب تعيين BOT_TOKEN في النظام أو منصة الاستضافة)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("لم يتم تعيين BOT_TOKEN في متغيرات البيئة!")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -35,7 +31,6 @@ def get_lang(user_id: int) -> str:
     return user_languages.get(user_id, "ar")
 
 # ─── Content Data ─────────────────────────────────────────────────────────────
-
 TOPICS = {
     "general": {
         "ar": [
@@ -261,7 +256,6 @@ DIFFICULTY_LABELS = {
 }
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
-
 def get_random_topic(category: str, lang: str) -> str:
     pool = TOPICS.get(category, TOPICS["general"]).get(lang, [])
     return random.choice(pool) if pool else "—"
@@ -294,7 +288,6 @@ def topic_message(topic: str, category: str, lang: str) -> str:
         )
 
 # ─── Keyboards ────────────────────────────────────────────────────────────────
-
 def main_menu_keyboard(lang: str) -> InlineKeyboardMarkup:
     if lang == "ar":
         buttons = [
@@ -349,7 +342,6 @@ def after_topic_keyboard(lang: str, category: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(buttons)
 
 # ─── Handlers ─────────────────────────────────────────────────────────────────
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = get_lang(user_id)
@@ -439,7 +431,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # ─── Quick Commands ────────────────────────────────────────────────────────────
-
 async def cmd_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = get_lang(user_id)
@@ -481,7 +472,6 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode="Markdown")
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
-
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
