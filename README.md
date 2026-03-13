@@ -89,3 +89,35 @@ nohup python bot.py &
     ]
 }
 ```
+
+# 🎤 Speech Topic Bot - بوت مواضيع الخطابة
+
+## 📋 أوامر Git التي تعلمتها (Git Cheat Sheet)
+
+### تهيئة المشروع
+```bash
+git init                    # إنشاء مستودع محلي جديد
+git add .                   # إضافة جميع الملفات للمنطقة المؤقتة
+git commit -m "الرسالة"     # حفظ التغييرات مع وصف
+```
+
+### ربط المستودع المحلي بالبعيد (GitHub)
+```bash
+git remote add origin https://github.com/costa-dev-dz/Speech_Topic_Bot.git
+git branch -M main          # تغيير اسم الفرع إلى main
+git push -u origin main     # رفع الكود لأول مرة
+```
+
+### بعد تعديل الكود (الروتين اليومي)
+```bash
+git add .                   # أو git add bot.py إذا أردت ملفاً واحداً
+git commit -m "وصف التعديل"
+git push                    # رفع التغييرات إلى GitHub
+```
+
+### أوامر مفيدة أخرى
+```bash
+git status                  # معرفة حالة الملفات
+git log --oneline           # عرض تاريخ commits باختصار
+git pull                    # جلب آخر التحديثات من GitHub
+```
