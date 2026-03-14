@@ -1,5 +1,6 @@
 """
 app.py — نقطة الدخول لـ Render (Web Service)
+Flask في thread منفصل، البوت في main thread
 """
 
 import os
@@ -15,27 +16,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ─── Flask App ──────────────────────────────────────────────────────────────────
-app = Flask(__name__)
+flask_app = Flask(__name__)
 
-@app.route('/')
+@flask_app.route('/')
 def home():
     return "🤖 Speech Topic Bot is running!"
 
-@app.route('/health')
+@flask_app.route('/health')
 def health():
     return "OK", 200
 
-# ─── Bot Runner ─────────────────────────────────────────────────────────────────
-def run_bot():
+def run_flask():
+    port = int(os.environ.get('PORT', 10000))
+    flask_app.run(host='0.0.0.0', port=port)
+
+# ─── Entry Point ────────────────────────────────────────────────────────────────
+if __name__ == '__main__':
+    # Flask في thread منفصل
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    logger.info("✅ Flask thread started")
+
+    # البوت في main thread (ضروري لأن run_polling يحتاج main thread)
     from telegram.ext import Application, CommandHandler, CallbackQueryHandler
     import bot as bot_module
 
-    # إنشاء event loop مستقل لهذا الـ thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     application = Application.builder().token(bot_module.BOT_TOKEN).build()
-
     application.add_handler(CommandHandler("start",     bot_module.start))
     application.add_handler(CommandHandler("topic",     bot_module.cmd_topic))
     application.add_handler(CommandHandler("framework", bot_module.cmd_framework))
@@ -44,12 +50,3 @@ def run_bot():
 
     logger.info("🤖 Bot is running!")
     application.run_polling(drop_pending_updates=True)
-
-# ─── Entry Point ────────────────────────────────────────────────────────────────
-if __name__ == '__main__':
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    logger.info("✅ Bot thread started")
-
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
