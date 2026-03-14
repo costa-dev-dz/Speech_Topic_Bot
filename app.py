@@ -1,13 +1,18 @@
 """
-app.py — نقطة الدخول لـ Render
-يشغّل Flask لاستقبال health checks + البوت في خيط منفصل
+app.py — نقطة الدخول لـ Render (Web Service)
 """
 
 import os
-import logging
 import asyncio
+import logging
 import threading
 from flask import Flask
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # ─── Flask App ──────────────────────────────────────────────────────────────────
 app = Flask(__name__)
@@ -22,21 +27,29 @@ def health():
 
 # ─── Bot Runner ─────────────────────────────────────────────────────────────────
 def run_bot():
-    """تشغيل البوت في event loop مستقل داخل thread منفصل"""
+    from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+    import bot as bot_module
+
+    # إنشاء event loop مستقل لهذا الـ thread
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    from bot import main as bot_main
-    bot_main()
+    application = Application.builder().token(bot_module.BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("start",     bot_module.start))
+    application.add_handler(CommandHandler("topic",     bot_module.cmd_topic))
+    application.add_handler(CommandHandler("framework", bot_module.cmd_framework))
+    application.add_handler(CommandHandler("help",      bot_module.cmd_help))
+    application.add_handler(CallbackQueryHandler(bot_module.callback_handler))
+
+    logger.info("🤖 Bot is running!")
+    application.run_polling(drop_pending_updates=True)
 
 # ─── Entry Point ────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    # تشغيل البوت في خيط منفصل مع event loop خاص به
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
+    logger.info("✅ Bot thread started")
 
-    logging.info("✅ Bot thread started")
-
-    # تشغيل Flask على المنفذ المطلوب
-    port = int(os.environ.get('PORT', 8000))
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
