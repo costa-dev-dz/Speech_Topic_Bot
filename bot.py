@@ -5,18 +5,17 @@ Supports Arabic & English | يدعم العربية والإنجليزية
 
 import logging
 import random
-import os  # لقراءة التوكن من متغير البيئة
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     ContextTypes
 )
 
-# ─── Configuration ────────────────────────────────────────────────────────────
-# قراءة التوكن من متغير البيئة (يجب تعيين BOT_TOKEN في النظام أو منصة الاستضافة)
+# ─── Configuration ─────────────────────────────────────────────────────────────
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    raise ValueError("لم يتم تعيين BOT_TOKEN في متغيرات البيئة!")
+    raise ValueError("❌ لم يتم تعيين BOT_TOKEN في متغيرات البيئة!")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -24,13 +23,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ─── User Language Storage (in-memory) ───────────────────────────────────────
+# ─── User Language Storage (in-memory) ─────────────────────────────────────────
 user_languages: dict[int, str] = {}
 
 def get_lang(user_id: int) -> str:
     return user_languages.get(user_id, "ar")
 
-# ─── Content Data ─────────────────────────────────────────────────────────────
+# ─── Content Data ───────────────────────────────────────────────────────────────
 TOPICS = {
     "general": {
         "ar": [
@@ -235,18 +234,18 @@ FRAMEWORKS = {
 
 CATEGORIES_META = {
     "ar": {
-        "general":    "💬 عام",
-        "tech":       "💻 تقنية",
-        "finance":    "💰 مالية",
-        "interview":  "🎯 مقابلات عمل",
-        "hot_takes":  "🌶️ آراء جريئة",
+        "general":   "💬 عام",
+        "tech":      "💻 تقنية",
+        "finance":   "💰 مالية",
+        "interview": "🎯 مقابلات عمل",
+        "hot_takes": "🌶️ آراء جريئة",
     },
     "en": {
-        "general":    "💬 General",
-        "tech":       "💻 Tech",
-        "finance":    "💰 Finance",
-        "interview":  "🎯 Interview Prep",
-        "hot_takes":  "🌶️ Hot Takes",
+        "general":   "💬 General",
+        "tech":      "💻 Tech",
+        "finance":   "💰 Finance",
+        "interview": "🎯 Interview Prep",
+        "hot_takes": "🌶️ Hot Takes",
     },
 }
 
@@ -255,7 +254,7 @@ DIFFICULTY_LABELS = {
     "en": {"easy": "🟢 Easy", "medium": "🟡 Medium", "hard": "🔴 Hard"},
 }
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── Helpers ────────────────────────────────────────────────────────────────────
 def get_random_topic(category: str, lang: str) -> str:
     pool = TOPICS.get(category, TOPICS["general"]).get(lang, [])
     return random.choice(pool) if pool else "—"
@@ -287,7 +286,7 @@ def topic_message(topic: str, category: str, lang: str) -> str:
             f"⏱ Set a 1-minute timer and start speaking!"
         )
 
-# ─── Keyboards ────────────────────────────────────────────────────────────────
+# ─── Keyboards ──────────────────────────────────────────────────────────────────
 def main_menu_keyboard(lang: str) -> InlineKeyboardMarkup:
     if lang == "ar":
         buttons = [
@@ -341,7 +340,7 @@ def after_topic_keyboard(lang: str, category: str) -> InlineKeyboardMarkup:
         ]
     return InlineKeyboardMarkup(buttons)
 
-# ─── Handlers ─────────────────────────────────────────────────────────────────
+# ─── Handlers ───────────────────────────────────────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = get_lang(user_id)
@@ -359,7 +358,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             f"👋 Hey *{name}*!\n\n"
             f"🎤 I'm your *Impromptu Speaking Bot*\n\n"
-            f"I'll give you a random topic, you set a 1-minute timer and speak!\n"
+            f"I'll give you a random topic, set a 1-minute timer and speak!\n"
             f"Daily practice = confident speaker 💪\n\n"
             f"Choose from the menu:"
         )
@@ -374,29 +373,24 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     lang = get_lang(user_id)
 
-    # ── Language toggle ────────────────────────────────────────────
     if data.startswith("lang_"):
         lang = data.split("_")[1]
         user_languages[user_id] = lang
         label = "تم تغيير اللغة إلى العربية 🇸🇦" if lang == "ar" else "Language changed to English 🇺🇸"
         await query.edit_message_text(label, reply_markup=main_menu_keyboard(lang))
 
-    # ── Main menu ──────────────────────────────────────────────────
     elif data == "menu_main":
         title = "اختر من القائمة:" if lang == "ar" else "Choose from the menu:"
         await query.edit_message_text(title, reply_markup=main_menu_keyboard(lang))
 
-    # ── Category menu ──────────────────────────────────────────────
     elif data == "menu_category":
         title = "📂 اختر الفئة:" if lang == "ar" else "📂 Choose a category:"
         await query.edit_message_text(title, reply_markup=category_keyboard(lang))
 
-    # ── Framework menu ─────────────────────────────────────────────
     elif data == "menu_framework":
         title = "🧱 اختر الإطار الخطابي:" if lang == "ar" else "🧱 Choose a speaking framework:"
         await query.edit_message_text(title, reply_markup=framework_keyboard(lang))
 
-    # ── Show framework detail ──────────────────────────────────────
     elif data.startswith("fw_"):
         fw_key = data.split("_")[1]
         fw = FRAMEWORKS.get(fw_key, {}).get(lang, {})
@@ -410,7 +404,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"*{title}*\n\n{desc}", parse_mode="Markdown", reply_markup=kb
         )
 
-    # ── Random topic ───────────────────────────────────────────────
     elif data == "topic_random":
         category = random.choice(list(TOPICS.keys()))
         topic = get_random_topic(category, lang)
@@ -420,7 +413,6 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=after_topic_keyboard(lang, category)
         )
 
-    # ── Topic from category ────────────────────────────────────────
     elif data.startswith("topic_cat_"):
         category = data.replace("topic_cat_", "")
         topic = get_random_topic(category, lang)
@@ -430,7 +422,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=after_topic_keyboard(lang, category)
         )
 
-# ─── Quick Commands ────────────────────────────────────────────────────────────
+# ─── Quick Commands ─────────────────────────────────────────────────────────────
 async def cmd_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = get_lang(user_id)
@@ -471,8 +463,16 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# ─── Main ───────────────────────────────────────────────────────────────────────
 def main():
+    # ✅ إصلاح لـ Python 3.12+ الذي لا ينشئ event loop تلقائيًا
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
