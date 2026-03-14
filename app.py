@@ -1,6 +1,5 @@
 """
-app.py — نقطة الدخول لـ Render (Web Service)
-Flask في thread منفصل، البوت في main thread
+app.py — الحل النهائي لـ Render + Python 3.14
 """
 
 import os
@@ -15,12 +14,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ─── Flask App ──────────────────────────────────────────────────────────────────
+# ─── Flask ──────────────────────────────────────────────────────────────────────
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
 def home():
-    return "🤖 Speech Topic Bot is running!"
+    return "🤖 Bot is running!"
 
 @flask_app.route('/health')
 def health():
@@ -30,23 +29,29 @@ def run_flask():
     port = int(os.environ.get('PORT', 10000))
     flask_app.run(host='0.0.0.0', port=port)
 
-# ─── Entry Point ────────────────────────────────────────────────────────────────
+# ─── Bot (async) ────────────────────────────────────────────────────────────────
+async def run_bot():
+    from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+    import bot as b
+
+    async with Application.builder().token(b.BOT_TOKEN).build() as app:
+        app.add_handler(CommandHandler("start",     b.start))
+        app.add_handler(CommandHandler("topic",     b.cmd_topic))
+        app.add_handler(CommandHandler("framework", b.cmd_framework))
+        app.add_handler(CommandHandler("help",      b.cmd_help))
+        app.add_handler(CallbackQueryHandler(b.callback_handler))
+
+        await app.updater.start_polling(drop_pending_updates=True)
+        logger.info("🤖 Bot is running!")
+
+        # شغّل إلى الأبد
+        await asyncio.Event().wait()
+
+# ─── Main ────────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     # Flask في thread منفصل
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    logger.info("✅ Flask thread started")
+    threading.Thread(target=run_flask, daemon=True).start()
+    logger.info("✅ Flask started")
 
-    # البوت في main thread (ضروري لأن run_polling يحتاج main thread)
-    from telegram.ext import Application, CommandHandler, CallbackQueryHandler
-    import bot as bot_module
-
-    application = Application.builder().token(bot_module.BOT_TOKEN).build()
-    application.add_handler(CommandHandler("start",     bot_module.start))
-    application.add_handler(CommandHandler("topic",     bot_module.cmd_topic))
-    application.add_handler(CommandHandler("framework", bot_module.cmd_framework))
-    application.add_handler(CommandHandler("help",      bot_module.cmd_help))
-    application.add_handler(CallbackQueryHandler(bot_module.callback_handler))
-
-    logger.info("🤖 Bot is running!")
-    application.run_polling(drop_pending_updates=True)
+    # البوت في main thread بـ asyncio.run() الصحيح لـ Python 3.14
+    asyncio.run(run_bot())
