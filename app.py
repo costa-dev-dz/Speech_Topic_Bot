@@ -1,5 +1,5 @@
 """
-app.py — الحل النهائي مع event loop ثابت
+app.py — الحل النهائي
 """
 
 import os
@@ -19,8 +19,14 @@ logger = logging.getLogger(__name__)
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
-# ─── Event loop ثابت ────────────────────────────────────────────────────────────
+# ─── Event loop ثابت في thread خاص ─────────────────────────────────────────────
 loop = asyncio.new_event_loop()
+
+def start_event_loop():
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+threading.Thread(target=start_event_loop, daemon=True).start()
 
 # ─── إعداد البوت ────────────────────────────────────────────────────────────────
 application = Application.builder().token(b.BOT_TOKEN).build()
@@ -45,23 +51,18 @@ def health():
 def webhook():
     data = request.get_json(force=True)
     update = Update.de_json(data, application.bot)
-    # استخدام نفس الـ loop الثابت بدلاً من إنشاء loop جديد في كل مرة
+    # أرسل للـ loop بدون انتظار — Flask يرد لتيليجرام فوراً
     asyncio.run_coroutine_threadsafe(
         application.process_update(update), loop
-    ).result()
-    return "OK", 200
-
-# ─── تشغيل الـ event loop في thread منفصل ───────────────────────────────────────
-def start_event_loop():
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
+    )
+    return "OK", 200  # رد فوري قبل معالجة الـ update
 
 # ─── تسجيل الـ Webhook ──────────────────────────────────────────────────────────
 async def setup():
     await application.initialize()
+    await application.start()
     webhook_url = f"{WEBHOOK_URL}/webhook/{b.BOT_TOKEN}"
     await application.bot.set_webhook(url=webhook_url)
-    await application.start()
     logger.info(f"✅ Webhook set: {webhook_url}")
 
 # ─── Main ────────────────────────────────────────────────────────────────────────
@@ -69,12 +70,7 @@ if __name__ == '__main__':
     if not WEBHOOK_URL:
         raise ValueError("❌ يجب تعيين WEBHOOK_URL في متغيرات البيئة!")
 
-    # تشغيل الـ event loop في thread خاص به
-    threading.Thread(target=start_event_loop, daemon=True).start()
-
-    # تسجيل الـ webhook
-    future = asyncio.run_coroutine_threadsafe(setup(), loop)
-    future.result()
+    asyncio.run_coroutine_threadsafe(setup(), loop).result()
 
     logger.info("🚀 Starting Flask...")
     port = int(os.environ.get('PORT', 10000))
