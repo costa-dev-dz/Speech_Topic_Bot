@@ -1,11 +1,13 @@
 """
 🎤 Speech Topic Bot - بوت مواضيع الخطابة
 Supports Arabic & English | يدعم العربية والإنجليزية
+v2.0 - إضافة فئات جديدة + مؤقت + فلتر الصعوبة
 """
 
 import logging
 import random
 import os
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
@@ -23,13 +25,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ─── User Language Storage (in-memory) ─────────────────────────────────────────
+# ─── User Storage ──────────────────────────────────────────────────────────────
 user_languages: dict[int, str] = {}
+user_difficulty: dict[int, str] = {}  # easy / medium / hard / any
 
 def get_lang(user_id: int) -> str:
     return user_languages.get(user_id, "ar")
 
-# ─── Content Data ───────────────────────────────────────────────────────────────
+def get_difficulty(user_id: int) -> str:
+    return user_difficulty.get(user_id, "any")
+
+# ─── Content Data ──────────────────────────────────────────────────────────────
 TOPICS = {
     "general": {
         "ar": [
@@ -137,6 +143,109 @@ TOPICS = {
             "Over-planning kills creativity.",
         ],
     },
+    # ─── فئات جديدة ───────────────────────────────────────────────────────────
+    "health": {
+        "ar": [
+            "هل النوم الكافي أهم من ممارسة الرياضة؟",
+            "كيف تؤثر الصحة النفسية على الإنتاجية اليومية؟",
+            "هل الأنظمة الغذائية الشائعة فعّالة حقاً؟",
+            "تحدث عن عادة صحية غيّرت حياتك.",
+            "هل يجب أن يكون الوصول للرعاية الصحية حقاً مجانياً للجميع؟",
+            "ما هو تأثير الهاتف على صحتنا الجسدية والنفسية؟",
+            "هل التأمل والاسترخاء ضرورة أم رفاهية؟",
+            "كيف نحافظ على صحتنا في عالم مليء بالضغوط؟",
+        ],
+        "en": [
+            "Is getting enough sleep more important than exercising?",
+            "How does mental health affect daily productivity?",
+            "Are popular diet trends actually effective?",
+            "Talk about a healthy habit that changed your life.",
+            "Should healthcare be a free right for everyone?",
+            "What is the impact of smartphones on our physical and mental health?",
+            "Is meditation a necessity or a luxury?",
+            "How do we stay healthy in a world full of stress?",
+        ],
+    },
+    "sports": {
+        "ar": [
+            "هل الرياضة تبني الشخصية أم تعكسها فقط؟",
+            "ما هو الرياضي الذي ألهمك وما الذي تعلمته منه؟",
+            "هل رواتب لاعبي كرة القدم مبررة؟",
+            "تحدث عن أصعب تحدٍّ رياضي واجهته.",
+            "هل الرياضات الإلكترونية رياضة حقيقية؟",
+            "ما هو دور الرياضة في تحقيق السلام بين الشعوب؟",
+            "هل المنافسة في الرياضة تعلّم الأطفال قيماً جيدة؟",
+        ],
+        "en": [
+            "Does sports build character or just reveal it?",
+            "Which athlete inspired you and what did you learn from them?",
+            "Are professional footballers' salaries justified?",
+            "Talk about the toughest sports challenge you've faced.",
+            "Are esports a real sport?",
+            "What role does sports play in achieving peace between nations?",
+            "Does competition in sports teach children good values?",
+        ],
+    },
+    "history": {
+        "ar": [
+            "ما هو الحدث التاريخي الذي تتمنى لو حدث بشكل مختلف؟",
+            "ماذا يمكننا أن نتعلم من سقوط الحضارات القديمة؟",
+            "هل التاريخ يعيد نفسه فعلاً؟",
+            "تحدث عن شخصية تاريخية تلهمك ولماذا.",
+            "ما هو اختراع في التاريخ غيّر مسار البشرية؟",
+            "هل يجب تدريس التاريخ المؤلم بصدق في المدارس؟",
+            "كيف شكّلت الحروب العالم الذي نعيش فيه اليوم؟",
+        ],
+        "en": [
+            "What historical event do you wish had gone differently?",
+            "What can we learn from the fall of ancient civilizations?",
+            "Does history truly repeat itself?",
+            "Talk about a historical figure who inspires you and why.",
+            "What invention in history most changed the course of humanity?",
+            "Should painful history be taught honestly in schools?",
+            "How did wars shape the world we live in today?",
+        ],
+    },
+    "philosophy": {
+        "ar": [
+            "هل الإنسان طيّب بطبعه أم شرير؟",
+            "ما معنى حياة ناجحة بالنسبة لك؟",
+            "هل الحرية الكاملة ممكنة؟",
+            "تحدث عن قيمة تؤمن بها وكيف تطبّقها في حياتك.",
+            "هل الأخلاق مطلقة أم نسبية؟",
+            "ما الذي يجعل الإنسان سعيداً حقاً؟",
+            "هل التقدم التكنولوجي يجعلنا أكثر إنسانية أم أقل؟",
+        ],
+        "en": [
+            "Is human nature inherently good or evil?",
+            "What does a successful life mean to you?",
+            "Is complete freedom possible?",
+            "Talk about a value you believe in and how you apply it.",
+            "Are morals absolute or relative?",
+            "What truly makes a person happy?",
+            "Does technological progress make us more or less human?",
+        ],
+    },
+    "culture": {
+        "ar": [
+            "كيف تؤثر ثقافتك على طريقة تفكيرك؟",
+            "هل العولمة تُثري الثقافات أم تمحوها؟",
+            "تحدث عن عادة من ثقافتك تفخر بها.",
+            "ما هو الكتاب أو الفيلم الذي غيّر نظرتك للحياة؟",
+            "هل اللغة تشكّل طريقة تفكيرنا؟",
+            "كيف نحافظ على الموروث الثقافي في عصر التكنولوجيا؟",
+            "هل السياحة تقرّب الشعوب من بعضها؟",
+        ],
+        "en": [
+            "How does your culture influence the way you think?",
+            "Does globalization enrich cultures or erase them?",
+            "Talk about a tradition from your culture you're proud of.",
+            "What book or film changed your outlook on life?",
+            "Does language shape the way we think?",
+            "How do we preserve cultural heritage in the age of technology?",
+            "Does tourism bring people closer together?",
+        ],
+    },
 }
 
 FRAMEWORKS = {
@@ -234,18 +343,28 @@ FRAMEWORKS = {
 
 CATEGORIES_META = {
     "ar": {
-        "general":   "💬 عام",
-        "tech":      "💻 تقنية",
-        "finance":   "💰 مالية",
-        "interview": "🎯 مقابلات عمل",
-        "hot_takes": "🌶️ آراء جريئة",
+        "general":    "💬 عام",
+        "tech":       "💻 تقنية",
+        "finance":    "💰 مالية",
+        "interview":  "🎯 مقابلات عمل",
+        "hot_takes":  "🌶️ آراء جريئة",
+        "health":     "🏥 صحة",
+        "sports":     "⚽ رياضة",
+        "history":    "📜 تاريخ",
+        "philosophy": "🧐 فلسفة",
+        "culture":    "🎭 ثقافة",
     },
     "en": {
-        "general":   "💬 General",
-        "tech":      "💻 Tech",
-        "finance":   "💰 Finance",
-        "interview": "🎯 Interview Prep",
-        "hot_takes": "🌶️ Hot Takes",
+        "general":    "💬 General",
+        "tech":       "💻 Tech",
+        "finance":    "💰 Finance",
+        "interview":  "🎯 Interview Prep",
+        "hot_takes":  "🌶️ Hot Takes",
+        "health":     "🏥 Health",
+        "sports":     "⚽ Sports",
+        "history":    "📜 History",
+        "philosophy": "🧐 Philosophy",
+        "culture":    "🎭 Culture",
     },
 }
 
@@ -254,45 +373,51 @@ DIFFICULTY_LABELS = {
     "en": {"easy": "🟢 Easy", "medium": "🟡 Medium", "hard": "🔴 Hard"},
 }
 
-# ─── Helpers ────────────────────────────────────────────────────────────────────
-def get_random_topic(category: str, lang: str) -> str:
-    pool = TOPICS.get(category, TOPICS["general"]).get(lang, [])
-    return random.choice(pool) if pool else "—"
-
-def difficulty_tag(topic: str, lang: str) -> str:
+# ─── Helpers ───────────────────────────────────────────────────────────────────
+def difficulty_level(topic: str) -> str:
     words = len(topic.split())
     if words < 8:
-        return DIFFICULTY_LABELS[lang]["easy"]
+        return "easy"
     elif words < 14:
-        return DIFFICULTY_LABELS[lang]["medium"]
+        return "medium"
     else:
-        return DIFFICULTY_LABELS[lang]["hard"]
+        return "hard"
+
+def get_random_topic(category: str, lang: str, difficulty: str = "any") -> str:
+    pool = TOPICS.get(category, TOPICS["general"]).get(lang, [])
+    if difficulty != "any":
+        filtered = [t for t in pool if difficulty_level(t) == difficulty]
+        pool = filtered if filtered else pool
+    return random.choice(pool) if pool else "—"
 
 def topic_message(topic: str, category: str, lang: str) -> str:
     cat_label = CATEGORIES_META[lang].get(category, "")
-    diff = difficulty_tag(topic, lang)
+    diff_key = difficulty_level(topic)
+    diff_label = DIFFICULTY_LABELS[lang][diff_key]
     if lang == "ar":
         return (
             f"🎤 *موضوعك للخطابة*\n\n"
             f"_{topic}_\n\n"
-            f"📂 الفئة: {cat_label}  |  {diff}\n\n"
-            f"⏱ اضبط مؤقتًا لمدة دقيقة وابدأ الكلام!"
+            f"📂 الفئة: {cat_label}  |  {diff_label}\n\n"
+            f"⏱ اضغط *ابدأ المؤقت* وتحدث لمدة دقيقة!"
         )
     else:
         return (
             f"🎤 *Your Speech Topic*\n\n"
             f"_{topic}_\n\n"
-            f"📂 Category: {cat_label}  |  {diff}\n\n"
-            f"⏱ Set a 1-minute timer and start speaking!"
+            f"📂 Category: {cat_label}  |  {diff_label}\n\n"
+            f"⏱ Press *Start Timer* and speak for one minute!"
         )
 
-# ─── Keyboards ──────────────────────────────────────────────────────────────────
+# ─── Keyboards ─────────────────────────────────────────────────────────────────
 def main_menu_keyboard(lang: str) -> InlineKeyboardMarkup:
+    diff = user_difficulty.get(0, "any")
     if lang == "ar":
         buttons = [
             [InlineKeyboardButton("🎲 موضوع عشوائي", callback_data="topic_random")],
             [InlineKeyboardButton("📂 اختر الفئة", callback_data="menu_category"),
              InlineKeyboardButton("🧱 الأطر الخطابية", callback_data="menu_framework")],
+            [InlineKeyboardButton("🎯 مستوى الصعوبة", callback_data="menu_difficulty")],
             [InlineKeyboardButton("🌐 English", callback_data="lang_en")],
         ]
     else:
@@ -300,18 +425,44 @@ def main_menu_keyboard(lang: str) -> InlineKeyboardMarkup:
             [InlineKeyboardButton("🎲 Random Topic", callback_data="topic_random")],
             [InlineKeyboardButton("📂 Pick Category", callback_data="menu_category"),
              InlineKeyboardButton("🧱 Frameworks", callback_data="menu_framework")],
+            [InlineKeyboardButton("🎯 Difficulty Level", callback_data="menu_difficulty")],
             [InlineKeyboardButton("🌐 العربية", callback_data="lang_ar")],
         ]
     return InlineKeyboardMarkup(buttons)
 
 def category_keyboard(lang: str) -> InlineKeyboardMarkup:
     cats = CATEGORIES_META[lang]
-    buttons = [
-        [InlineKeyboardButton(label, callback_data=f"topic_cat_{key}")]
-        for key, label in cats.items()
-    ]
+    items = list(cats.items())
+    # صفّين في كل صف
+    buttons = []
+    for i in range(0, len(items), 2):
+        row = [InlineKeyboardButton(items[i][1], callback_data=f"topic_cat_{items[i][0]}")]
+        if i + 1 < len(items):
+            row.append(InlineKeyboardButton(items[i+1][1], callback_data=f"topic_cat_{items[i+1][0]}"))
+        buttons.append(row)
     back_label = "🔙 رجوع" if lang == "ar" else "🔙 Back"
     buttons.append([InlineKeyboardButton(back_label, callback_data="menu_main")])
+    return InlineKeyboardMarkup(buttons)
+
+def difficulty_keyboard(lang: str, current: str) -> InlineKeyboardMarkup:
+    def mark(key):
+        return "✅ " if current == key else ""
+    if lang == "ar":
+        buttons = [
+            [InlineKeyboardButton(f"{mark('any')}🎲 عشوائي", callback_data="diff_any"),
+             InlineKeyboardButton(f"{mark('easy')}🟢 سهل", callback_data="diff_easy")],
+            [InlineKeyboardButton(f"{mark('medium')}🟡 متوسط", callback_data="diff_medium"),
+             InlineKeyboardButton(f"{mark('hard')}🔴 صعب", callback_data="diff_hard")],
+            [InlineKeyboardButton("🔙 رجوع", callback_data="menu_main")],
+        ]
+    else:
+        buttons = [
+            [InlineKeyboardButton(f"{mark('any')}🎲 Any", callback_data="diff_any"),
+             InlineKeyboardButton(f"{mark('easy')}🟢 Easy", callback_data="diff_easy")],
+            [InlineKeyboardButton(f"{mark('medium')}🟡 Medium", callback_data="diff_medium"),
+             InlineKeyboardButton(f"{mark('hard')}🔴 Hard", callback_data="diff_hard")],
+            [InlineKeyboardButton("🔙 Back", callback_data="menu_main")],
+        ]
     return InlineKeyboardMarkup(buttons)
 
 def framework_keyboard(lang: str) -> InlineKeyboardMarkup:
@@ -328,29 +479,48 @@ def framework_keyboard(lang: str) -> InlineKeyboardMarkup:
 def after_topic_keyboard(lang: str, category: str) -> InlineKeyboardMarkup:
     if lang == "ar":
         buttons = [
+            [InlineKeyboardButton("⏱ ابدأ المؤقت 60 ث", callback_data=f"timer_{category}")],
             [InlineKeyboardButton("🔄 موضوع جديد", callback_data=f"topic_cat_{category}"),
              InlineKeyboardButton("🧱 إطار خطابي", callback_data="menu_framework")],
             [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="menu_main")],
         ]
     else:
         buttons = [
+            [InlineKeyboardButton("⏱ Start 60s Timer", callback_data=f"timer_{category}")],
             [InlineKeyboardButton("🔄 New Topic", callback_data=f"topic_cat_{category}"),
              InlineKeyboardButton("🧱 Framework", callback_data="menu_framework")],
             [InlineKeyboardButton("🏠 Main Menu", callback_data="menu_main")],
         ]
     return InlineKeyboardMarkup(buttons)
 
-# ─── Handlers ───────────────────────────────────────────────────────────────────
+# ─── Timer ─────────────────────────────────────────────────────────────────────
+async def run_timer(context, chat_id: int, lang: str):
+    """مؤقت 60 ثانية يرسل تنبيهات"""
+    checkpoints = {
+        45: ("⏱ 45 ثانية..." if lang == "ar" else "⏱ 45 seconds..."),
+        30: ("⏱ نصف الوقت — 30 ثانية!" if lang == "ar" else "⏱ Halfway — 30 seconds!"),
+        15: ("⚡ 15 ثانية فقط!" if lang == "ar" else "⚡ Only 15 seconds left!"),
+    }
+    await asyncio.sleep(15)
+    await context.bot.send_message(chat_id=chat_id, text=checkpoints[45])
+    await asyncio.sleep(15)
+    await context.bot.send_message(chat_id=chat_id, text=checkpoints[30])
+    await asyncio.sleep(15)
+    await context.bot.send_message(chat_id=chat_id, text=checkpoints[15])
+    await asyncio.sleep(15)
+    done_msg = "⏰ *انتهى الوقت!* أحسنت 💪\n\nهل تريد موضوعاً جديداً؟" if lang == "ar" else "⏰ *Time's up!* Well done 💪\n\nWant a new topic?"
+    await context.bot.send_message(chat_id=chat_id, text=done_msg, parse_mode="Markdown")
+
+# ─── Handlers ──────────────────────────────────────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = get_lang(user_id)
-    name = update.effective_user.first_name or "صديقي"
-
+    name = update.effective_user.first_name or ("صديقي" if lang == "ar" else "there")
     if lang == "ar":
         text = (
             f"👋 أهلًا *{name}*!\n\n"
             f"🎤 أنا بوت *مواضيع الخطابة الارتجالية*\n\n"
-            f"سأعطيك موضوعًا عشوائيًا، اضبط مؤقت دقيقة، وابدأ الحديث!\n"
+            f"سأعطيك موضوعًا عشوائيًا، اضغط المؤقت، وابدأ الحديث!\n"
             f"ممارسة يومية = خطيب بارع 💪\n\n"
             f"اختر من القائمة:"
         )
@@ -358,7 +528,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             f"👋 Hey *{name}*!\n\n"
             f"🎤 I'm your *Impromptu Speaking Bot*\n\n"
-            f"I'll give you a random topic, set a 1-minute timer and speak!\n"
+            f"I'll give you a random topic, press the timer and speak!\n"
             f"Daily practice = confident speaker 💪\n\n"
             f"Choose from the menu:"
         )
@@ -372,21 +542,42 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     data = query.data
     lang = get_lang(user_id)
+    difficulty = get_difficulty(user_id)
 
+    # ── Language toggle ────────────────────────────────────────────
     if data.startswith("lang_"):
         lang = data.split("_")[1]
         user_languages[user_id] = lang
         label = "تم تغيير اللغة إلى العربية 🇸🇦" if lang == "ar" else "Language changed to English 🇺🇸"
         await query.edit_message_text(label, reply_markup=main_menu_keyboard(lang))
 
+    # ── Main menu ──────────────────────────────────────────────────
     elif data == "menu_main":
         title = "اختر من القائمة:" if lang == "ar" else "Choose from the menu:"
         await query.edit_message_text(title, reply_markup=main_menu_keyboard(lang))
 
+    # ── Category menu ──────────────────────────────────────────────
     elif data == "menu_category":
         title = "📂 اختر الفئة:" if lang == "ar" else "📂 Choose a category:"
         await query.edit_message_text(title, reply_markup=category_keyboard(lang))
 
+    # ── Difficulty menu ────────────────────────────────────────────
+    elif data == "menu_difficulty":
+        title = "🎯 اختر مستوى الصعوبة:" if lang == "ar" else "🎯 Choose difficulty level:"
+        await query.edit_message_text(title, reply_markup=difficulty_keyboard(lang, difficulty))
+
+    elif data.startswith("diff_"):
+        level = data.split("_")[1]
+        user_difficulty[user_id] = level
+        labels = {
+            "ar": {"any": "🎲 عشوائي", "easy": "🟢 سهل", "medium": "🟡 متوسط", "hard": "🔴 صعب"},
+            "en": {"any": "🎲 Any", "easy": "🟢 Easy", "medium": "🟡 Medium", "hard": "🔴 Hard"},
+        }
+        label = labels[lang][level]
+        msg = f"✅ تم اختيار: {label}" if lang == "ar" else f"✅ Selected: {label}"
+        await query.edit_message_text(msg, reply_markup=difficulty_keyboard(lang, level))
+
+    # ── Framework menu ─────────────────────────────────────────────
     elif data == "menu_framework":
         title = "🧱 اختر الإطار الخطابي:" if lang == "ar" else "🧱 Choose a speaking framework:"
         await query.edit_message_text(title, reply_markup=framework_keyboard(lang))
@@ -397,37 +588,46 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         title = fw.get("title", fw_key)
         desc = fw.get("desc", "")
         back_label = "🔙 رجوع" if lang == "ar" else "🔙 Back"
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton(back_label, callback_data="menu_framework")]
-        ])
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton(back_label, callback_data="menu_framework")]])
         await query.edit_message_text(
             f"*{title}*\n\n{desc}", parse_mode="Markdown", reply_markup=kb
         )
 
+    # ── Timer ──────────────────────────────────────────────────────
+    elif data.startswith("timer_"):
+        category = data.replace("timer_", "")
+        chat_id = query.message.chat_id
+        start_msg = "🟢 *بدأ المؤقت! تحدث الآن...*" if lang == "ar" else "🟢 *Timer started! Speak now...*"
+        await query.edit_message_text(start_msg, parse_mode="Markdown")
+        asyncio.create_task(run_timer(context, chat_id, lang))
+
+    # ── Random topic ───────────────────────────────────────────────
     elif data == "topic_random":
         category = random.choice(list(TOPICS.keys()))
-        topic = get_random_topic(category, lang)
+        topic = get_random_topic(category, lang, difficulty)
         msg = topic_message(topic, category, lang)
         await query.edit_message_text(
             msg, parse_mode="Markdown",
             reply_markup=after_topic_keyboard(lang, category)
         )
 
+    # ── Topic from category ────────────────────────────────────────
     elif data.startswith("topic_cat_"):
         category = data.replace("topic_cat_", "")
-        topic = get_random_topic(category, lang)
+        topic = get_random_topic(category, lang, difficulty)
         msg = topic_message(topic, category, lang)
         await query.edit_message_text(
             msg, parse_mode="Markdown",
             reply_markup=after_topic_keyboard(lang, category)
         )
 
-# ─── Quick Commands ─────────────────────────────────────────────────────────────
+# ─── Quick Commands ────────────────────────────────────────────────────────────
 async def cmd_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     lang = get_lang(user_id)
+    difficulty = get_difficulty(user_id)
     category = random.choice(list(TOPICS.keys()))
-    topic = get_random_topic(category, lang)
+    topic = get_random_topic(category, lang, difficulty)
     msg = topic_message(topic, category, lang)
     await update.message.reply_text(
         msg, parse_mode="Markdown",
@@ -463,9 +663,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     await update.message.reply_text(text, parse_mode="Markdown")
 
-# ─── Main ───────────────────────────────────────────────────────────────────────
+# ─── Main ──────────────────────────────────────────────────────────────────────
 def main():
-    # ✅ إصلاح لـ Python 3.12+ الذي لا ينشئ event loop تلقائيًا
     import asyncio
     try:
         loop = asyncio.get_event_loop()
@@ -474,7 +673,6 @@ def main():
         asyncio.set_event_loop(loop)
 
     app = Application.builder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("topic", cmd_topic))
     app.add_handler(CommandHandler("framework", cmd_framework))
