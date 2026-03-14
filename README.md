@@ -13,22 +13,45 @@
 3. اختر اسمًا ومعرفًا للبوت
 4. انسخ **التوكن** الذي ستحصل عليه
 
-### 2. ضع التوكن في الكود
-افتح `bot.py` وعدّل السطر:
-```python
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
-```
-استبدل `YOUR_BOT_TOKEN_HERE` بتوكنك الفعلي.
-
-### 3. ثبّت المتطلبات
+### 2. ثبّت المتطلبات
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-### 4. شغّل البوت
-```bash
+### 3. شغّل البوت محلياً
+```powershell
+$env:BOT_TOKEN = "توكنك_هنا"
 python bot.py
 ```
+
+---
+
+## ☁️ النشر على Render
+
+1. ارفع الملفات على GitHub
+2. أنشئ **Web Service** على [render.com](https://render.com)
+3. اضبط الإعدادات:
+
+| الحقل | القيمة |
+|-------|--------|
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `python app.py` |
+
+4. أضف متغيرات البيئة:
+
+| Key | Value |
+|-----|-------|
+| `BOT_TOKEN` | توكن البوت |
+| `WEBHOOK_URL` | `https://اسم-مشروعك.onrender.com` |
+
+---
+
+## 🔄 منع النوم مع UptimeRobot
+
+أنشئ monitor على [uptimerobot.com](https://uptimerobot.com):
+- **Monitor Type:** HTTP(s)
+- **URL:** `https://اسم-مشروعك.onrender.com/health`
+- **Interval:** Every 5 minutes
 
 ---
 
@@ -50,6 +73,11 @@ python bot.py
 - 💰 مالية / Finance
 - 🎯 مقابلات عمل / Interview Prep
 - 🌶️ آراء جريئة / Hot Takes
+- 🏥 صحة / Health
+- ⚽ رياضة / Sports
+- 📜 تاريخ / History
+- 🧐 فلسفة / Philosophy
+- 🎭 ثقافة / Culture
 
 ## 🧱 الأطر الخطابية
 
@@ -60,24 +88,6 @@ python bot.py
 
 ---
 
-## ☁️ الاستضافة (اختياري)
-
-لتشغيل البوت 24/7 بدون إيقاف:
-
-**Railway.app (مجاني)**
-```bash
-# 1. ارفع الملفات على GitHub
-# 2. اربط المستودع بـ Railway
-# 3. أضف متغير بيئة: BOT_TOKEN=توكنك
-```
-
-**VPS (Ubuntu)**
-```bash
-nohup python bot.py &
-```
-
----
-
 ## 🔧 إضافة مواضيع جديدة
 
 في `bot.py`، ابحث عن قاموس `TOPICS` وأضف موضوعك:
@@ -85,39 +95,53 @@ nohup python bot.py &
 "general": {
     "ar": [
         "موضوعك الجديد هنا...",
-        # ...
     ]
 }
 ```
 
-# 🎤 Speech Topic Bot - بوت مواضيع الخطابة
+---
 
-## 📋 أوامر Git التي تعلمتها (Git Cheat Sheet)
+## 📋 Git Cheat Sheet
 
-### تهيئة المشروع
-```bash
-git init                    # إنشاء مستودع محلي جديد
-git add .                   # إضافة جميع الملفات للمنطقة المؤقتة
-git commit -m "الرسالة"     # حفظ التغييرات مع وصف
+### الروتين اليومي (باستخدام الـ shortcut)
+```powershell
+gcp "وصف التعديل"   # يرفع كل شيء بأمر واحد
 ```
 
-### ربط المستودع المحلي بالبعيد (GitHub)
+### أو يدوياً
 ```bash
-git remote add origin https://github.com/costa-dev-dz/Speech_Topic_Bot.git
-git branch -M main          # تغيير اسم الفرع إلى main
-git push -u origin main     # رفع الكود لأول مرة
-```
-
-### بعد تعديل الكود (الروتين اليومي)
-```bash
-git add .                   # أو git add bot.py إذا أردت ملفاً واحداً
+git add .
 git commit -m "وصف التعديل"
-git push                    # رفع التغييرات إلى GitHub
+git push
 ```
 
-### أوامر مفيدة أخرى
+### أوامر مفيدة
 ```bash
-git status                  # معرفة حالة الملفات
-git log --oneline           # عرض تاريخ commits باختصار
-git pull                    # جلب آخر التحديثات من GitHub
+gs                      # git status
+gl                      # آخر 5 commits
+git pull                # جلب آخر التحديثات
+git log --oneline       # تاريخ كامل
 ```
+
+---
+
+## ⚡ Git Shortcuts (shortcuts.ps1)
+
+لتفعيل الاختصارات على أي جهاز جديد، شغّل هذا مرة واحدة:
+```powershell
+. .\shortcuts.ps1
+```
+
+أو لتفعيلها بشكل دائم على جهازك:
+```powershell
+notepad $PROFILE
+```
+والصق محتوى `shortcuts.ps1` فيه.
+
+### الاختصارات المتاحة
+
+| الأمر | يعادل |
+|-------|-------|
+| `gcp "رسالة"` | `git add . && git commit -m "رسالة" && git push` |
+| `gs` | `git status` |
+| `gl` | `git log --oneline -5` |
