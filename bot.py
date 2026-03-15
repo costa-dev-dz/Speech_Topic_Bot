@@ -7,6 +7,9 @@ v2.0 - إضافة فئات جديدة + مؤقت + فلتر الصعوبة
 import logging
 import random
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -226,6 +229,67 @@ TOPICS = {
             "Does technological progress make us more or less human?",
         ],
     },
+    "education": {
+        "ar": [
+            "هل نظام التعليم الحالي يُعدّ الطلاب للحياة الحقيقية؟",
+            "هل يجب إلغاء الامتحانات النهائية؟",
+            "ما الفرق بين التعليم والتثقيف الذاتي؟",
+            "هل الشهادة الجامعية ضرورة في عصر الإنترنت؟",
+            "تحدث عن مادة دراسية غيّرت طريقة تفكيرك.",
+            "هل الذكاء العاطفي أهم من الذكاء الأكاديمي؟",
+            "هل يجب تعليم مهارات الحياة في المدارس؟",
+        ],
+        "en": [
+            "Is the current education system preparing students for real life?",
+            "Should final exams be abolished?",
+            "What's the difference between education and self-learning?",
+            "Is a university degree necessary in the age of the internet?",
+            "Talk about a subject that changed the way you think.",
+            "Is emotional intelligence more important than academic intelligence?",
+            "Should life skills be taught in schools?",
+        ],
+    },
+    "relationship": {
+        "ar": [
+            "هل الصداقة الحقيقية ممكنة بين الجنسين؟",
+            "ما الذي يجعل العلاقة ناجحة على المدى الطويل؟",
+            "هل وسائل التواصل الاجتماعي أضرّت بالعلاقات الإنسانية؟",
+            "تحدث عن شخص علّمك درسًا مهمًا في الحياة.",
+            "هل من الضروري أن تتشابه اهتمامات الشريكين؟",
+            "كيف تتعامل مع الخلافات في العلاقات؟",
+            "هل العلاقات عن بُعد قابلة للنجاح؟",
+        ],
+        "en": [
+            "Is true friendship between genders possible?",
+            "What makes a relationship successful long-term?",
+            "Has social media damaged human relationships?",
+            "Talk about someone who taught you an important life lesson.",
+            "Do partners need to share the same interests?",
+            "How do you handle conflicts in relationships?",
+            "Can long-distance relationships truly work?",
+        ],
+    },
+    "mindset": {
+        "ar": [
+            "هل الإنسان يمكنه تغيير شخصيته بإرادته؟",
+            "ما الفرق بين العقلية الثابتة والعقلية النامية؟",
+            "هل التفاؤل المفرط خطير؟",
+            "تحدث عن عادة غيّرت حياتك للأفضل.",
+            "هل الفشل ضروري للنجاح؟",
+            "كيف تتعامل مع الخوف من المجهول؟",
+            "هل الانضباط أهم من الموهبة؟",
+        ],
+        "en": [
+            "Can a person truly change their personality by willpower?",
+            "What's the difference between a fixed and growth mindset?",
+            "Is excessive optimism dangerous?",
+            "Talk about a habit that changed your life for the better.",
+            "Is failure necessary for success?",
+            "How do you deal with fear of the unknown?",
+            "Is discipline more important than talent?",
+        ],
+    },
+}
     "culture": {
         "ar": [
             "كيف تؤثر ثقافتك على طريقة تفكيرك؟",
@@ -348,6 +412,9 @@ CATEGORIES_META = {
         "finance":    "💰 مالية",
         "interview":  "🎯 مقابلات عمل",
         "hot_takes":  "🌶️ آراء جريئة",
+        "education": "📚 تعليم",
+        "relationship": "❤️ علاقات",
+        "mindset": "🧠 عقلية",
         "health":     "🏥 صحة",
         "sports":     "⚽ رياضة",
         "history":    "📜 تاريخ",
@@ -360,6 +427,9 @@ CATEGORIES_META = {
         "finance":    "💰 Finance",
         "interview":  "🎯 Interview Prep",
         "hot_takes":  "🌶️ Hot Takes",
+        "education": "📚 Education",
+        "relationship": "❤️ Relationships",
+        "mindset": "🧠 Mindset",
         "health":     "🏥 Health",
         "sports":     "⚽ Sports",
         "history":    "📜 History",

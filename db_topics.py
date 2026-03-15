@@ -3,6 +3,9 @@ db_topics.py — قراءة مواضيع من Supabase عبر REST API
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import random
 import logging
 import httpx

@@ -3,6 +3,9 @@ app.py — الحل النهائي مع توليد مواضيع أسبوعي
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import asyncio
 import logging
 import threading
