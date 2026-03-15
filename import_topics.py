@@ -30,8 +30,15 @@ def supabase_headers():
 def import_from_csv(filepath: str, batch_size: int = 50):
     """استيراد من CSV — كل صف: category, lang, topic"""
     rows = []
-    with open(filepath, encoding="utf-8") as f:
+    
+    # 1. تغيير الترميز إلى utf-8-sig لإزالة أي رموز BOM خفية تلقائياً
+    with open(filepath, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
+        
+        # 2. تنظيف أسماء الأعمدة من أي مسافات زائدة
+        if reader.fieldnames:
+            reader.fieldnames = [field.strip() for field in reader.fieldnames]
+            
         for row in reader:
             rows.append({
                 "category": row["category"].strip(),

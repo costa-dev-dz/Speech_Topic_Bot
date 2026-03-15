@@ -4,8 +4,10 @@ Supports Arabic & English | يدعم العربية والإنجليزية
 v2.0 - إضافة فئات جديدة + مؤقت + فلتر الصعوبة
 """
 
+from __future__ import annotations
 import logging
 import random
+
 import os
 from dotenv import load_dotenv
 load_dotenv()
