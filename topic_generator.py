@@ -1,19 +1,18 @@
 """
-topic_generator.py — توليد مواضيع أسبوعياً بالذكاء الاصطناعي
-Claude API + Supabase REST API (بدون مكتبة supabase)
+topic_generator.py — توليد مواضيع أسبوعياً بـ Groq API (مجاني)
 """
 
 import os
 import json
 import logging
+import time
 import httpx
-import anthropic
 
 logger = logging.getLogger(__name__)
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-SUPABASE_URL      = os.getenv("SUPABASE_URL")
-SUPABASE_KEY      = os.getenv("SUPABASE_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 CATEGORIES = {
     "general":    {"ar": "عام",          "en": "General"},
@@ -36,34 +35,45 @@ def supabase_headers():
     }
 
 def generate_topics(category: str, lang: str, count: int = 5) -> list[str]:
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     cat_name = CATEGORIES[category][lang]
 
     if lang == "ar":
         prompt = f"""أنت خبير في فن الخطابة والتحدث أمام الجمهور.
 اقترح {count} مواضيع جديدة ومثيرة للنقاش لفئة "{cat_name}" باللغة العربية.
-المواضيع يجب أن تكون:
-- قصيرة وواضحة (جملة واحدة أو سؤال)
-- مثيرة للتفكير والنقاش
-- مناسبة للتحدث عنها لمدة دقيقة
-- مختلفة عن المواضيع الشائعة
+المواضيع يجب أن تكون قصيرة ومثيرة للتفكير ومناسبة للتحدث عنها لمدة دقيقة.
 
 أجب فقط بـ JSON بهذا الشكل بدون أي نص إضافي:
 {{"topics": ["الموضوع 1", "الموضوع 2", "الموضوع 3", "الموضوع 4", "الموضوع 5"]}}"""
     else:
-        prompt = f"""You are an expert in public speaking and rhetoric.
-Suggest {count} new and thought-provoking topics for the "{cat_name}" category in English.
-Topics should be short, debatable, and suitable for 1-minute speeches.
+        prompt = f"""You are a public speaking expert.
+Suggest {count} new thought-provoking topics for the "{cat_name}" category in English.
+Topics should be short, debatable, suitable for 1-minute speeches.
 
 Reply ONLY with JSON, no extra text:
 {{"topics": ["Topic 1", "Topic 2", "Topic 3", "Topic 4", "Topic 5"]}}"""
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}]
+    response = httpx.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": "llama-3.1-8b-instant",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.8,
+        },
+        timeout=30
     )
-    data = json.loads(message.content[0].text.strip())
+    response.raise_for_status()
+    text = response.json()["choices"][0]["message"]["content"].strip()
+
+    if "```" in text:
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+
+    data = json.loads(text.strip())
     return data["topics"]
 
 def save_topics_to_db(topics: list[str], category: str, lang: str):
@@ -94,8 +104,10 @@ def weekly_topic_generation():
                 topics = generate_topics(category, lang, count=5)
                 save_topics_to_db(topics, category, lang)
                 total += len(topics)
+                time.sleep(3)  # تأخير بسيط بين الطلبات
             except Exception as e:
                 logger.error(f"❌ Error {category}/{lang}: {e}")
+                time.sleep(5)
     logger.info(f"✅ Done — {total} topics added")
 
 if __name__ == "__main__":

@@ -384,6 +384,16 @@ def difficulty_level(topic: str) -> str:
         return "hard"
 
 def get_random_topic(category: str, lang: str, difficulty: str = "any") -> str:
+    # أولاً: حاول جلب موضوع من Supabase
+    try:
+        from db_topics import get_topic_from_db
+        db_topic = get_topic_from_db(category, lang)
+        if db_topic:
+            return db_topic
+    except Exception:
+        pass
+
+    # احتياطاً: استخدم القائمة الثابتة
     pool = TOPICS.get(category, TOPICS["general"]).get(lang, [])
     if difficulty != "any":
         filtered = [t for t in pool if difficulty_level(t) == difficulty]
