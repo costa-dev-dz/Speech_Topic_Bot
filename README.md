@@ -13,14 +13,25 @@
 3. اختر اسمًا ومعرفًا للبوت
 4. انسخ **التوكن** الذي ستحصل عليه
 
-### 2. ثبّت المتطلبات
+### 2. أنشئ ملف `.env`
+انسخ `.env.example` وسمّه `.env` وأدخل مفاتيحك:
+```env
+BOT_TOKEN=توكن_البوت
+WEBHOOK_URL=https://speech-topic-bot.onrender.com
+GROQ_API_KEY=مفتاح_groq
+SUPABASE_URL=https://xxxx.supabase.co
+SUPABASE_KEY=مفتاح_supabase
+```
+
+### 3. ثبّت المتطلبات
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-### 3. شغّل البوت محلياً
+> المتطلبات تشمل: `python-telegram-bot`, `flask`, `APScheduler`, `python-dotenv`
+
+### 4. شغّل البوت محلياً
 ```powershell
-$env:BOT_TOKEN = "توكنك_هنا"
 python bot.py
 ```
 
@@ -43,6 +54,9 @@ python bot.py
 |-----|-------|
 | `BOT_TOKEN` | توكن البوت |
 | `WEBHOOK_URL` | `https://اسم-مشروعك.onrender.com` |
+| `GROQ_API_KEY` | مفتاح Groq |
+| `SUPABASE_URL` | رابط Supabase |
+| `SUPABASE_KEY` | مفتاح Supabase |
 
 ---
 
@@ -78,6 +92,9 @@ python bot.py
 - 📜 تاريخ / History
 - 🧐 فلسفة / Philosophy
 - 🎭 ثقافة / Culture
+- 📚 تعليم / Education
+- ❤️ علاقات / Relationships
+- 🧠 عقلية / Mindset
 
 ## 🧱 الأطر الخطابية
 
@@ -88,16 +105,12 @@ python bot.py
 
 ---
 
-## 🔧 إضافة مواضيع جديدة
+## 🤖 إضافة مواضيع جديدة
 
-في `bot.py`، ابحث عن قاموس `TOPICS` وأضف موضوعك:
-```python
-"general": {
-    "ar": [
-        "موضوعك الجديد هنا...",
-    ]
-}
-```
+راجع ملف `TOPICS_GUIDE.md` للتفاصيل الكاملة حول:
+- توليد مواضيع بالذكاء الاصطناعي
+- استيراد من CSV أو JSON
+- البرومبت الاحترافي الجاهز
 
 ---
 
