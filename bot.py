@@ -291,7 +291,7 @@ TOPICS = {
             "Is discipline more important than talent?",
         ],
     },
-}
+
     "culture": {
         "ar": [
             "كيف تؤثر ثقافتك على طريقة تفكيرك؟",
